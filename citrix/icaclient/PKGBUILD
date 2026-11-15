@@ -1,0 +1,227 @@
+# Maintainer: Stephan Springer <buzo+arch@Lini.de>
+# Contributor: Moabeat <moabeat@berlin.de>
+# Contributor: Eric Liu <eric@hnws.me>
+# Contributor: Daniele Vazzola <daniele.vazzola@gmail.com>
+# Contributor: Ciarán Coffey <ciaran@ccoffey.ie>
+# Contributor: Matthew Gyurgyik <matthew@pyther.net>
+# Contributor: Giorgio Azzinnaro <giorgio@azzinna.ro>
+
+pkgname=icaclient
+pkgver=26.08.0.225
+pkgrel=2
+pkgdesc="Citrix Workspace App (a.k.a. ICAClient, Citrix Receiver)"
+arch=(x86_64 aarch64)
+url='https://www.citrix.com/downloads/workspace-app/linux/workspace-app-for-linux-latest.html'
+license=(LicenseRef-Citrix)
+depends=(alsa-lib curl gst-plugins-base-libs libc++ libc++abi
+         libsecret libvorbis libxaw libxml2-legacy libxp
+         openssl speex)
+# local addition: NetScaler Gateway Endpoint Analysis (EPA), x86_64 only
+depends_x86_64=(gpgme gtk3 libnotify libproxy pugixml)
+# local change: 26.08's selfservice links libwebkit2gtk-4.1 (in extra), not 4.0
+depends+=(webkit2gtk-4.1)
+conflicts=('bin32-citrix-client' 'citrix-client')
+options=(!strip)
+backup=('opt/Citrix/ICAClient/config/appsrv.ini'
+	'opt/Citrix/ICAClient/config/wfclient.ini'
+	'opt/Citrix/ICAClient/config/module.ini')
+_dl_urls_="$(curl -sL "$url" | grep -F ".tar.gz?__gda__")"
+_dl_urls="$(echo "$_dl_urls_" | grep -F "$pkgver.tar.gz?__gda__")"
+_source64=https:"$(echo "$_dl_urls" | sed -En 's|^.*rel="(//.*/linuxx64-[^"]*)".*$|\1|p')"
+_sourceaarch64=https:"$(echo "$_dl_urls" | sed -En 's|^.*rel="(//.*/linuxarm64-[^"]*)".*$|\1|p')"
+source=('citrix-configmgr.desktop'
+        'citrix-conncenter.desktop'
+        'citrix-wfica.desktop'
+        'citrix-workspace.desktop'
+        'wfica.sh'
+        'wfica_assoc.sh'
+        'ctxcwalogd.service'
+        'ctxusbd.service')
+source_x86_64=("$pkgname-x64-$pkgver.tar.gz::$_source64")
+source_aarch64=("$pkgname-arm64-$pkgver.tar.gz::$_sourceaarch64")
+sha256sums=('643427b6e04fc47cd7d514af2c2349948d3b45f536c434ba8682dcb1d4314736'
+            '446bfe50e5e1cb027415b264a090cede1468dfbdc8b55e5ce14e9289b6134119'
+            '1dc6d6592fa08c44fb6a4efa0dc238e9e78352bb799ef2e1a92358b390868064'
+            'cdfb3a2ef3bf6b0dd9d17c7a279735db23bc54420f34bfd43606830557a922fe'
+            'fe0b92bb9bfa32010fe304da5427d9ca106e968bad0e62a5a569e3323a57443f'
+            'a3bd74aaf19123cc550cde71b5870d7dacf9883b7e7a85c90e03b508426c16c4'
+            '0e3a6c7cf7fa9eee7dcde7356e90ffa1cb312bffc0813a0bf123d2f918dc369d'
+            '739da3fca95d07fc3076522acc6b6c1b12b988047bd2fb3c87e37231e49f2e1f')
+sha256sums_x86_64=('4231d4c2550656f89ca05b53d70543391dbf7a0c18bc44b4f85184758c5cbaa0')
+sha256sums_aarch64=('bbcf1e8c76b655c4f9d46ec72b62de1c7fc4f8d7222f40fb57928092afb1c7c3')
+install=citrix-client.install
+
+# Local addition. Mirrors what Citrix's hinst/nsepa .deb do, minus the parts that
+# don't belong in a package: no symlink in /usr/lib (the libgpgme.so.11 compat
+# link lives in a private dir used via a wrapper), no world-writable desktop file,
+# nothing in /usr/local, and startnsgcepa.sh (root script that su's into every
+# logged-in user) is not installed. The browser starts EPA via nsgcepa:// links.
+_package_epa() {
+    local epatmp="$srcdir/epa"
+    local dst="${pkgdir}/opt/Citrix/Browser-EPA"
+    local src="$epatmp/epadebianpkg/opt/Citrix/Browser-EPA"
+
+    rm -rf "$epatmp"
+    mkdir -p "$epatmp"
+    tar -xf "$ICADIR"/EPA/linuxvpn-*.tar -C "$epatmp" nsepa.tar.gz
+    tar -xzf "$epatmp/nsepa.tar.gz" -C "$epatmp"
+
+    install -d "$dst"
+    install -m755 "$src/nsgcepa" "$dst/"
+    install -m644 -t "$dst" "$src"/*.so "$src"/LinuxClientLibrary.so.sig \
+            "$src"/version.json "$src"/minversion.txt "$src"/releaseversion.txt \
+            "$src"/nsgcepa.desktop
+    install -m444 "$src/pubkey.asc" "$dst/"
+
+    # nsgcepa links against libgpgme.so.11; Arch ships gpgme 2.x with the same
+    # versioned symbols (GPGME_1.0/1.1) under a newer SONAME.
+    install -d "$dst/compat"
+    ln -s /usr/lib/libgpgme.so "$dst/compat/libgpgme.so.11"
+
+    install -d "${pkgdir}/usr/bin"
+    cat > "${pkgdir}/usr/bin/nsgcepa" <<'EOF'
+#!/bin/sh
+LD_LIBRARY_PATH="/opt/Citrix/Browser-EPA/compat${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+export LD_LIBRARY_PATH
+exec /opt/Citrix/Browser-EPA/nsgcepa "$@"
+EOF
+    chmod 755 "${pkgdir}/usr/bin/nsgcepa"
+
+    # URL handler for nsgcepa:// links opened by the NetScaler Gateway login page
+    sed -e 's|^Exec=.*|Exec=/usr/bin/nsgcepa %u|' \
+        -e 's|^Name=.*|Name=Citrix Endpoint Analysis|' \
+        -e 's|^Terminal=False|Terminal=false|' \
+        -e 's|^Categories=.*|Categories=Network;|' \
+        -e '/^Icon=$/d' \
+        -e '/^Version=/d' \
+        -e '$a NoDisplay=true' \
+        "$src/nsgcepa.desktop" > "$epatmp/nsgcepa.desktop"
+    install -Dm644 "$epatmp/nsgcepa.desktop" "${pkgdir}/usr/share/applications/nsgcepa.desktop"
+}
+
+# Local addition. The same handlers hinst's DT_create_files writes (same Exec
+# lines), generated cleanly instead of copying its files (which have
+# "Exec= " with a leading space and the deprecated Encoding key).
+#   receiver://, citrixauthwebviewdone://, ctxlinuxamloauth://, ctxaadsso://,
+#   citrixweb://  -> util/ctxwebhelper   (sign-in callbacks, web portal detection)
+#   citrixapp://  -> selfservice
+#   .cr store configuration files -> util/new_store
+_package_handlers() {
+    local apps="${pkgdir}/usr/share/applications" ica=/opt/Citrix/ICAClient
+    local name scheme exec
+    install -d "$apps"
+    while read -r name scheme exec; do
+        cat > "$apps/citrix-$name.desktop" <<EOF
+[Desktop Entry]
+Type=Application
+Name=Citrix Workspace Launcher
+Exec=$exec
+TryExec=${exec%% *}
+Icon=$ica/icons/receiver.png
+NoDisplay=true
+StartupWMClass=Wfica
+Categories=Network;
+MimeType=$scheme;
+EOF
+    done <<EOF
+receiver x-scheme-handler/receiver $ica/util/ctxwebhelper %u
+receiver-fido2 x-scheme-handler/citrixauthwebviewdone $ica/util/ctxwebhelper %u
+fido2-llt x-scheme-handler/ctxlinuxamloauth $ica/util/ctxwebhelper %u
+ctxaadsso x-scheme-handler/ctxaadsso $ica/util/ctxwebhelper %u
+citrixweb x-scheme-handler/citrixweb $ica/util/ctxwebhelper %u
+citrixapp x-scheme-handler/citrixapp $ica/selfservice %u
+new-store application/vnd.citrix.receiver.configure $ica/util/new_store -icaroot $ica %f
+EOF
+    sed -i 's/^Name=.*/Name=Add Citrix Store/' "$apps/citrix-new-store.desktop"
+    # .ica and .cr MIME type definitions
+    install -Dm644 "$ICADIR/desktop/Citrix-mime_types.xml" \
+        "${pkgdir}/usr/share/mime/packages/citrix-mime_types.xml"
+}
+
+package() {
+    cd "${srcdir}"
+    ICAROOT=/opt/Citrix/ICAClient
+    if [[ $CARCH == 'x86_64' ]]
+    then
+        ICADIR="$srcdir/linuxx64/linuxx64.cor"
+        PKGINF="Ver.core.linuxx64"
+   elif [[ $CARCH == 'aarch64' ]]
+    then
+        ICADIR="$srcdir/linuxarm64/linuxarm64.cor"
+        PKGINF="Ver.core.linuxarm64"
+    fi
+
+    mkdir -p "${pkgdir}$ICAROOT"
+
+    cd "$ICADIR"
+    install -m755 -t "${pkgdir}$ICAROOT" \
+            *.so *.DLL \
+            adapter AuthManagerDaemon icasessionmgr NativeMessagingHost \
+            PrimaryAuthManager ServiceRecord selfservice UtilDaemon wfica
+
+    # copy common directories
+    cp -rt "${pkgdir}$ICAROOT" aml clsync config gtk help icons keyboard keystore lib nls site usb util
+
+    # copy x86_64 only directories
+    if [[ $CARCH == 'x86_64' ]]
+    then
+        cp -rt "${pkgdir}$ICAROOT" bcr
+    fi
+
+    # fix permissions
+    chmod -R a+r "${pkgdir}$ICAROOT"
+
+    # Install License
+    install -m644 -D -t "${pkgdir}$ICAROOT" nls/en.UTF-8/eula.txt
+    install -Dm644 nls/en.UTF-8/eula.txt "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+
+    # Install Version
+    install -m644 -D "${srcdir}/PkgId" "${pkgdir}$ICAROOT/pkginf/$PKGINF"
+
+    # create /config/.server to enable user customization using ~/.ICACLient/ overrides. Thanks Tomek
+    touch "${pkgdir}$ICAROOT/config/.server"
+
+    # Install wrapper script
+    install -m755 "${srcdir}/wfica.sh" "${pkgdir}$ICAROOT/wfica.sh"
+
+    ln -s gst_play1.0 "${pkgdir}/$ICAROOT/util/gst_play"
+    ln -s gst_read1.0 "${pkgdir}/$ICAROOT/util/gst_read"
+
+    # Dirty Hack
+    # wfica expects {module,wfclient,apssrv}.ini in $ICAROOT/config
+    # sadly these configs differ slightly by locale
+    lang=${LANG%%_*}
+    lang=${lang:-'en'}
+    [[ -d "${pkgdir}/$ICAROOT/nls/$lang" ]] || lang='en'
+    cp "${pkgdir}$ICAROOT/nls/$lang/module.ini" "${pkgdir}/$ICAROOT/config/"
+    cp "${pkgdir}$ICAROOT/nls/$lang/appsrv.template" "${pkgdir}/$ICAROOT/config/appsrv.ini"
+    cp "${pkgdir}$ICAROOT/nls/$lang/wfclient.template" "${pkgdir}/$ICAROOT/config/wfclient.ini"
+
+    sed -i \
+        -e 's/Ceip=Enable/Ceip=Disable/' \
+        -e 's/DisableHeartBeat=False/DisableHeartBeat=True/' \
+        "${pkgdir}$ICAROOT/config/module.ini"
+    cd "${srcdir}"
+    # install freedesktop.org files
+    install -Dm644 -t "$pkgdir"/usr/share/applications citrix-{configmgr,conncenter,workspace,wfica}.desktop
+    # local addition: URL/file handlers Citrix's installer (hinst) registers
+    _package_handlers
+    # install scripts
+    install -Dm755 -t "${pkgdir}$ICAROOT" wfica.sh wfica_assoc.sh
+
+    chmod +x "${pkgdir}$ICAROOT"/util/{ctx_app_bind,ctxcwalogd,icalicense.sh,setlog}
+    if [ $CARCH != 'aarch64' ]
+    then
+        chmod +x "${pkgdir}$ICAROOT"/util/HdxRtcEngine
+    fi
+
+    # local addition: NetScaler Gateway Endpoint Analysis (EPA)
+    if [[ $CARCH == 'x86_64' ]]
+    then
+        _package_epa
+    fi
+
+    # install systemd unit files
+    install -Dm755 -t "${pkgdir}/usr/lib/systemd/system" "ctxcwalogd.service"
+    install -Dm755 -t "${pkgdir}/usr/lib/systemd/system" "ctxusbd.service"
+}
