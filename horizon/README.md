@@ -39,5 +39,5 @@ view.enableDataSharing = "FALSE"
 
 in `/etc/omnissa/horizon-mandatory-config`.
 
-**Not yet verified.** After the first launch, check that the setting shows as off
-in the client and record the result here.
+**Verified** (2609-1, Nov 2026): with `/etc/omnissa/horizon-mandatory-config` in
+place before the first launch, the client showed data sharing as off.

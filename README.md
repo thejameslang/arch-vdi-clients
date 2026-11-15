@@ -52,7 +52,7 @@ Starting from the AUR `icaclient` package (base commit `77eafb5`, 26.04.10.1):
 `citrix/local-changes.patch` holds the same changes as git patches, to re-apply on
 top of a newer AUR version.
 
-The usual Citrix telemetry settings come from the AUR package (`Ceip=Disable`,
+The usual Citrix telemetry settings come from the AUR package (`EnableCeip=Disable`,
 `DisableHeartBeat=True` in `/opt/Citrix/ICAClient/config/module.ini`).
 
 ## Keep AUR helpers from replacing it

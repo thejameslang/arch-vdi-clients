@@ -86,8 +86,8 @@ in README.md and are also in `citrix/local-changes.patch` (against AUR commit
    - Check the EPA binaries' SHA-256 against `epaHash` and `epalibHash` in
      `/opt/Citrix/Browser-EPA/version.json`.
    - Telemetry is off:
-     `grep -E '^(Ceip|DisableHeartBeat)=' /opt/Citrix/ICAClient/config/module.ini`
-     must show `Ceip=Disable` and `DisableHeartBeat=True`. `module.ini` is a pacman
+     `grep -E '^(EnableCeip|DisableHeartBeat)=' /opt/Citrix/ICAClient/config/module.ini`
+     must show `EnableCeip=Disable` and `DisableHeartBeat=True`. `module.ini` is a pacman
      `backup` file, so if it was edited, an upgrade leaves a `module.ini.pacnew`
      instead of replacing it. Check the live file.
    - `pacman-conf IgnorePkg` lists `icaclient`.
