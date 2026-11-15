@@ -62,11 +62,21 @@ in README.md and are also in `citrix/local-changes.patch` (against AUR commit
      showed up.
    - Commit and push the updated recipe to this repo, regenerating `.SRCINFO`
      with `makepkg --printsrcinfo` and `local-changes.patch`.
-4. **Install:** have the user run `sudo pacman -S --needed` for missing
-   dependencies, build with `makepkg`, then `sudo pacman -U` the package.
-5. **Per-user setup:** create `~/.ICAClient/cache` and copy in the region .ini
+4. **Protect it from AUR helpers.** Run `pacman-conf IgnorePkg`. If `icaclient`
+   isn't listed, have the user run:
+   `sudo sed -i '/^\[options\]/a IgnorePkg = icaclient' /etc/pacman.conf`
+   Otherwise `paru`/`yay` would replace this build with the plain AUR one (no EPA,
+   no handlers). Repeated `IgnorePkg` lines add up, so this is safe even if one
+   already exists. Run `pacman-conf IgnorePkg` again to confirm.
+5. **Install:** have the user run `sudo pacman -S --needed` for missing
+   dependencies, build with `makepkg`, then `sudo pacman -U` the package. Because
+   of `IgnorePkg`, pacman asks "icaclient is in IgnorePkg/IgnoreGroup. Install
+   anyway?"; tell the user to answer Y.
+6. **Per-user setup:** create `~/.ICAClient/cache` and copy in the region .ini
    files (see README.md). Don't overwrite existing files.
-6. **Verify:**
+7. **USB redirection** is optional. Only if the user wants it, have them run
+   `sudo systemctl enable --now ctxusbd`. That also starts `ctxcwalogd`.
+8. **Verify:**
    - `ld.so --list` on `wfica`, `selfservice` and `/opt/Citrix/Browser-EPA/nsgcepa`
      with `LD_LIBRARY_PATH=/opt/Citrix/Browser-EPA/compat`. Nothing should show
      "not found".
@@ -75,8 +85,31 @@ in README.md and are also in `citrix/local-changes.patch` (against AUR commit
      `application/x-ica` and `application/vnd.citrix.receiver.configure`.
    - Check the EPA binaries' SHA-256 against `epaHash` and `epalibHash` in
      `/opt/Citrix/Browser-EPA/version.json`.
-7. Tell the user that the first `.ica` file shows the license agreement, and that
+   - Telemetry is off:
+     `grep -E '^(Ceip|DisableHeartBeat)=' /opt/Citrix/ICAClient/config/module.ini`
+     must show `Ceip=Disable` and `DisableHeartBeat=True`. `module.ini` is a pacman
+     `backup` file, so if it was edited, an upgrade leaves a `module.ini.pacnew`
+     instead of replacing it. Check the live file.
+   - `pacman-conf IgnorePkg` lists `icaclient`.
+9. Tell the user that the first `.ica` file shows the license agreement, and that
    the reminder about `~/.ICAClient` reappears on every upgrade and can be ignored.
+
+## After a gpgme update: re-test EPA
+
+EPA reaches Arch's gpgme 2.x through the `compat/libgpgme.so.11` link, which points
+at `/usr/lib/libgpgme.so`. A gpgme update can rename the library or drop symbols, and
+EPA would then fail silently during a gateway sign-in. Whenever `gpgme` has been
+upgraded (check `grep -E 'upgraded gpgme ' /var/log/pacman.log`), re-test:
+
+- `LD_LIBRARY_PATH=/opt/Citrix/Browser-EPA/compat /usr/lib/ld-linux-x86-64.so.2 --list /opt/Citrix/Browser-EPA/nsgcepa`
+  shows no "not found", and `libgpgme.so.11` resolves through `compat/`.
+- Every undefined gpgme symbol of `nsgcepa` (`readelf --dyn-syms -W`, `UND`,
+  currently `GPGME_1.0`/`GPGME_1.1`) is defined in `/usr/lib/libgpgme.so`. Normalise
+  `@@` to `@` before comparing.
+- `/opt/Citrix/Browser-EPA/compat/libgpgme.so.11` isn't a dangling link.
+
+If a symbol is missing, tell the user that EPA will break on this gpgme. Don't patch
+the EPA binary (its hash is checked); look for a Citrix EPA update instead.
 
 ## Known behaviour
 

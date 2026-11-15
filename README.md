@@ -43,12 +43,32 @@ Starting from the AUR `icaclient` package (base commit `77eafb5`, 26.04.10.1):
 4. **Depends on `webkit2gtk-4.1`** (in Arch's official repos). Version 26.08's app
    window ("selfservice") needs it. The old `webkit2gtk`/`libsoup` optional
    dependencies are gone.
+5. **systemd units** (`ctxcwalogd.service`, `ctxusbd.service`) are installed with
+   mode 644 instead of 755. Their runtime folders under `/run` are managed with
+   `RuntimeDirectory=` instead of `mkdir`/`rm -rf` on `/var/run`.
 
 `citrix/local-changes.patch` holds the same changes as git patches, to re-apply on
 top of a newer AUR version.
 
 The usual Citrix telemetry settings come from the AUR package (`Ceip=Disable`,
-`DisableHeartBeat=True` in `module.ini`).
+`DisableHeartBeat=True` in `/opt/Citrix/ICAClient/config/module.ini`).
+
+## Keep AUR helpers from replacing it
+
+`icaclient` also exists in the AUR. An AUR helper such as `paru` or `yay` would see
+its version there as an update and replace this build, which would drop EPA and the
+handlers. To stop that, add `icaclient` to `IgnorePkg` in `/etc/pacman.conf`.
+`IgnorePkg` lines add up, so a new line under `[options]` is fine even if one
+already exists:
+
+```sh
+sudo sed -i '/^\[options\]/a IgnorePkg = icaclient' /etc/pacman.conf
+pacman-conf IgnorePkg    # should list icaclient
+```
+
+Installing this build with `sudo pacman -U …` then asks
+`icaclient is in IgnorePkg/IgnoreGroup. Install anyway?`. Answer **Y**. Updates
+now only happen when you rebuild from this repo.
 
 ## After installing Citrix
 
@@ -64,6 +84,18 @@ once.
 
 The first `.ica` file you open shows Citrix's license agreement. After you accept,
 sessions start normally.
+
+### USB redirection (optional)
+
+Passing local USB devices into a Citrix session needs the USB service, which isn't
+enabled by default:
+
+```sh
+sudo systemctl enable --now ctxusbd
+```
+
+It pulls in `ctxcwalogd` (the log writer) automatically. Not tested on this setup
+yet.
 
 ## License
 
