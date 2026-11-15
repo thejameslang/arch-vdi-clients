@@ -8,7 +8,7 @@
 
 pkgname=icaclient
 pkgver=26.08.0.225
-pkgrel=3
+pkgrel=4
 pkgdesc="Citrix Workspace App (a.k.a. ICAClient, Citrix Receiver)"
 arch=(x86_64 aarch64)
 url='https://www.citrix.com/downloads/workspace-app/linux/workspace-app-for-linux-latest.html'
@@ -46,7 +46,7 @@ sha256sums=('643427b6e04fc47cd7d514af2c2349948d3b45f536c434ba8682dcb1d4314736'
             'fe0b92bb9bfa32010fe304da5427d9ca106e968bad0e62a5a569e3323a57443f'
             'a3bd74aaf19123cc550cde71b5870d7dacf9883b7e7a85c90e03b508426c16c4'
             'ac14afcd7eef72972c81a8c209ede99cf727e7dd55f30e9a80ddf05d71207dba'
-            'b33446ac7aa6de3a7b71723cfadfdacda1476a794fca72a4ceed325082d52055')
+            'daadbc8c4aac64900d3ce9e40f15f97abada30420d26be3bafdb0f11d02f595e')
 sha256sums_x86_64=('4231d4c2550656f89ca05b53d70543391dbf7a0c18bc44b4f85184758c5cbaa0')
 sha256sums_aarch64=('bbcf1e8c76b655c4f9d46ec72b62de1c7fc4f8d7222f40fb57928092afb1c7c3')
 install=citrix-client.install

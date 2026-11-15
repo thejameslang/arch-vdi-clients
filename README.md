@@ -45,7 +45,9 @@ Starting from the AUR `icaclient` package (base commit `77eafb5`, 26.04.10.1):
    dependencies are gone.
 5. **systemd units** (`ctxcwalogd.service`, `ctxusbd.service`) are installed with
    mode 644 instead of 755. Their runtime folders under `/run` are managed with
-   `RuntimeDirectory=` instead of `mkdir`/`rm -rf` on `/var/run`.
+   `RuntimeDirectory=` instead of `mkdir`/`rm -rf` on `/var/run`. `ctxusbd` also
+   has `After=ctxcwalogd.service`. It already had `Requires=`, but without an
+   ordering line systemd could start both at the same time.
 
 `citrix/local-changes.patch` holds the same changes as git patches, to re-apply on
 top of a newer AUR version.

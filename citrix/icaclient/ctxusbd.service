@@ -4,6 +4,7 @@
 [Unit]
 Description=Citrix Workspace App USB Forwarding Service
 After=udev.service
+After=ctxcwalogd.service
 Requires=ctxcwalogd.service
 
 [Service]
