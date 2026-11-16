@@ -5,7 +5,7 @@ Notes and package recipes for installing two VDI clients on Arch-based distros
 
 | Client | Source | Customised? |
 |---|---|---|
-| Omnissa Horizon Client | AUR `omnissa-horizon-client` | No, used as-is. Telemetry is turned off by config. See [horizon/](horizon/) |
+| Omnissa Horizon Client | AUR `omnissa-horizon-client` | No, used as-is. Telemetry is turned off by config, plus an optional per-user launcher fix for dark KDE themes. See [horizon/](horizon/) |
 | Citrix Workspace app | AUR `icaclient` | **Yes**. The recipe is in [citrix/icaclient/](citrix/icaclient/) |
 
 Everything gets built in a temporary directory under `/tmp`, so nothing is left in

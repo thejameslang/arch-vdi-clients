@@ -1,0 +1,26 @@
+#!/bin/bash
+# Launch Omnissa Horizon with a light GTK theme, bypassing KDE's dark
+# ~/.config/gtk-3.0/colors.css (which makes Horizon dialogs unreadable).
+REAL="${XDG_CONFIG_HOME:-$HOME/.config}"
+ALT="$HOME/.local/share/horizon-light-config"
+mkdir -p "$ALT/gtk-3.0"
+# Mirror every entry of the real config dir except gtk-3.0
+for e in "$REAL"/* "$REAL"/.[!.]*; do
+  [ -e "$e" ] || continue
+  n=$(basename "$e"); [ "$n" = gtk-3.0 ] && continue
+  [ -e "$ALT/$n" ] || ln -s "$e" "$ALT/$n"
+done
+# Drop links whose targets were removed
+find "$ALT" -maxdepth 1 -xtype l -delete
+cat > "$ALT/gtk-3.0/settings.ini" <<INI
+[Settings]
+gtk-theme-name=Breeze
+gtk-application-prefer-dark-theme=false
+gtk-icon-theme-name=breeze
+gtk-font-name=Noto Sans, 10
+gtk-cursor-theme-name=capitaine-cursors
+gtk-cursor-theme-size=24
+INI
+export XDG_CONFIG_HOME="$ALT" GTK_THEME=Breeze:light
+unset GTK_MODULES
+exec /usr/bin/horizon-client "$@"

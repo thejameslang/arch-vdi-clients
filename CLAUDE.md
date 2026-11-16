@@ -30,6 +30,13 @@ The owner uses this repo to reinstall two VDI clients on a fresh Arch-based syst
    `view.enableDataSharing = "FALSE"`. After the first launch, verify the setting
    took effect, and update horizon/README.md with the result. It wasn't verified
    when this was written.
+4. **Dark theme fix (KDE only).** If the desktop is KDE Plasma with a dark color
+   scheme (`~/.config/gtk-3.0/colors.css` exists and the theme is dark), install
+   `horizon/horizon-light` and the launcher copy as described in horizon/README.md
+   ("Unreadable dialogs with a dark KDE theme"). Everything goes in the user's home
+   folder, so no sudo is needed. Check with
+   `tr '\0' '\n' < /proc/$(pgrep -f /usr/lib/omnissa/horizon/bin/horizon-client | head -1)/environ | grep XDG_CONFIG_HOME`
+   after a relaunch; it should point at `~/.local/share/horizon-light-config`.
 
 ## Citrix Workspace (icaclient)
 
