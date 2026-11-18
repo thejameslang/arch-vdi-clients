@@ -80,4 +80,23 @@ view.enableDataSharing = "FALSE"
 in `/etc/omnissa/horizon-mandatory-config`.
 
 **Verified** (2609-1, Nov 2026): with `/etc/omnissa/horizon-mandatory-config` in
-place before the first launch, the client showed data sharing as off.
+place before the first launch, the client showed data sharing as off. Confirmed
+again on 2609-1 with Omarchy (Hyprland), 17 Nov 2026: Data Sharing was unchecked in
+the client's settings on first launch. `~/.omnissa/horizon-preferences` has no
+`view.enableDataSharing` entry in this case, so check the settings window, not that
+file.
+
+## Folders the client creates
+
+Besides `~/.omnissa`, the client creates `~/omnissa-<user>` (with `bcr`,
+`html5mmr`, `mmr` and `teamsopt` folders) when a desktop session starts. It writes
+per-session config files for its redirection features there. This is expected and
+not a leftover from the build.
+
+## Other Arch-based distros
+
+The steps above also work unchanged on Omarchy (Hyprland). The dark KDE theme fix
+doesn't apply there. On a fresh Omarchy install from offline media, pacman may have
+no `core`/`extra`/`multilib` databases yet (`/var/lib/pacman/sync` holds only
+`offline.db` and `omarchy.db`). Run `sudo pacman -Syu` before installing the
+dependencies.
