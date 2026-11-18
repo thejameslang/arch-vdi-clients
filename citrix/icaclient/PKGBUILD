@@ -8,7 +8,7 @@
 
 pkgname=icaclient
 pkgver=26.08.0.225
-pkgrel=4
+pkgrel=5
 pkgdesc="Citrix Workspace App (a.k.a. ICAClient, Citrix Receiver)"
 arch=(x86_64 aarch64)
 url='https://www.citrix.com/downloads/workspace-app/linux/workspace-app-for-linux-latest.html'
@@ -39,12 +39,12 @@ source=('citrix-configmgr.desktop'
         'ctxusbd.service')
 source_x86_64=("$pkgname-x64-$pkgver.tar.gz::$_source64")
 source_aarch64=("$pkgname-arm64-$pkgver.tar.gz::$_sourceaarch64")
-sha256sums=('643427b6e04fc47cd7d514af2c2349948d3b45f536c434ba8682dcb1d4314736'
-            '446bfe50e5e1cb027415b264a090cede1468dfbdc8b55e5ce14e9289b6134119'
+sha256sums=('d87c996611b342aae3a9a7b593bd2101528a55dfbcaf25824839128a5b904ee2'
+            '1328eaff51642cb427f26fafcd7877739887f5a5294fa9e22431b96d53690230'
             '1dc6d6592fa08c44fb6a4efa0dc238e9e78352bb799ef2e1a92358b390868064'
-            'cdfb3a2ef3bf6b0dd9d17c7a279735db23bc54420f34bfd43606830557a922fe'
-            'fe0b92bb9bfa32010fe304da5427d9ca106e968bad0e62a5a569e3323a57443f'
-            'a3bd74aaf19123cc550cde71b5870d7dacf9883b7e7a85c90e03b508426c16c4'
+            '3318fa499bdc3ede3e385577cc7de5b571e8fab563b0f738767f5d7791455288'
+            'f7b8e9d0d793a2dfcba834f6612b4a6c17f33a4b605332cc5bbdebe4dc148483'
+            'b7e10496712215bdec748d606e4273ffcc95c8ba7e4a2cf04c9d847fa18f47ac'
             'ac14afcd7eef72972c81a8c209ede99cf727e7dd55f30e9a80ddf05d71207dba'
             'daadbc8c4aac64900d3ce9e40f15f97abada30420d26be3bafdb0f11d02f595e')
 sha256sums_x86_64=('4231d4c2550656f89ca05b53d70543391dbf7a0c18bc44b4f85184758c5cbaa0')
@@ -83,6 +83,8 @@ _package_epa() {
 #!/bin/sh
 LD_LIBRARY_PATH="/opt/Citrix/Browser-EPA/compat${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 export LD_LIBRARY_PATH
+GDK_BACKEND=x11
+export GDK_BACKEND
 exec /opt/Citrix/Browser-EPA/nsgcepa "$@"
 EOF
     chmod 755 "${pkgdir}/usr/bin/nsgcepa"
@@ -106,6 +108,11 @@ EOF
 #   citrixweb://  -> util/ctxwebhelper   (sign-in callbacks, web portal detection)
 #   citrixapp://  -> selfservice
 #   .cr store configuration files -> util/new_store
+# Local change: every Citrix launcher, handler and wrapper sets GDK_BACKEND=x11.
+# Citrix's auth helpers call X11 directly (gdk_x11_*, XSendEvent); with GTK on
+# Wayland, PrimaryAuthManager segfaults when the sign-in window opens (seen on
+# Omarchy/Hyprland, which sets GDK_BACKEND=wayland,x11,*). Child processes
+# (AuthManagerDaemon, PrimaryAuthManager) inherit it.
 _package_handlers() {
     local apps="${pkgdir}/usr/share/applications" ica=/opt/Citrix/ICAClient
     local name scheme exec
@@ -115,7 +122,7 @@ _package_handlers() {
 [Desktop Entry]
 Type=Application
 Name=Citrix Workspace Launcher
-Exec=$exec
+Exec=env GDK_BACKEND=x11 $exec
 TryExec=${exec%% *}
 Icon=$ica/icons/receiver.png
 NoDisplay=true

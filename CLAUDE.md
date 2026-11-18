@@ -98,6 +98,10 @@ in README.md and are also in `citrix/local-changes.patch` (against AUR commit
      `backup` file, so if it was edited, an upgrade leaves a `module.ini.pacnew`
      instead of replacing it. Check the live file.
    - `pacman-conf IgnorePkg` lists `icaclient`.
+   - The X11 fix is in place: every `Exec=` in `/usr/share/applications/citrix-*.desktop`
+     starts with `env GDK_BACKEND=x11`, or goes through `wfica.sh`, which sets it.
+     After a launch from the app launcher, `/proc/<pid>/environ` of `selfservice`
+     and `AuthManagerDaemon` shows `GDK_BACKEND=x11`.
 9. Tell the user that the first `.ica` file shows the license agreement, and that
    the reminder about `~/.ICAClient` reappears on every upgrade and can be ignored.
 
@@ -122,5 +126,12 @@ the EPA binary (its hash is checked); look for a Citrix EPA update instead.
 
 - EPA (the device check) opens in its own window. It works from the browser
   sign-in, and the user reported it also works during the app's own sign-in.
-- Harmless log noise: `lldpcli: command not found` from wfica, and OpenH264
-  frame-skip warnings.
+- Harmless log noise: `lldpcli: command not found` from wfica, OpenH264
+  frame-skip warnings, `Failed to connect with logd` (ctxcwalogd isn't running
+  unless USB redirection is enabled), and `can't load pkcs11 module
+  'opensc-pkcs11.so'` (no smart card; support is turned off and nothing breaks).
+- `PrimaryAuthManager` segfaulting at address 0 when adding a store (Nov 2026,
+  Omarchy) means it ran with GTK on Wayland. The recipe sets `GDK_BACKEND=x11`. If
+  it comes back, check the environment of the Citrix processes first.
+  An `AuthManagerDaemon` left over from a launch without the setting keeps the
+  Wayland backend until it's killed.

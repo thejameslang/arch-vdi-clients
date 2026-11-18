@@ -48,6 +48,15 @@ Starting from the AUR `icaclient` package (base commit `77eafb5`, 26.04.10.1):
    `RuntimeDirectory=` instead of `mkdir`/`rm -rf` on `/var/run`. `ctxusbd` also
    has `After=ctxcwalogd.service`. It already had `Requires=`, but without an
    ordering line systemd could start both at the same time.
+6. **Runs Citrix on X11 (XWayland).** Every Citrix launcher, URL/file handler and
+   wrapper script sets `GDK_BACKEND=x11`. Citrix's sign-in helpers call X11
+   directly, and with GTK on Wayland `PrimaryAuthManager` segfaults (jumps to
+   address 0) as soon as the sign-in window opens, so adding a store fails. Seen
+   on Omarchy/Hyprland, which sets `GDK_BACKEND=wayland,x11,*` for the whole
+   session. The helpers it starts (`AuthManagerDaemon`, `PrimaryAuthManager`)
+   inherit the setting. Nothing outside Citrix changes. After installing, quit
+   Citrix completely once, because helpers that are still running keep their old
+   setting.
 
 `citrix/local-changes.patch` holds the same changes as git patches, to re-apply on
 top of a newer AUR version.

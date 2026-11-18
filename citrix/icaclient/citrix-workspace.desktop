@@ -6,4 +6,4 @@ Name=Citrix Workspace
 Categories=Application;Network;X-Red-Hat-Base;X-SuSE-Core-Internet;
 Icon=/opt/Citrix/ICAClient/icons/manager.png
 TryExec=/opt/Citrix/ICAClient/selfservice
-Exec=/opt/Citrix/ICAClient/selfservice --icaroot /opt/Citrix/ICAClient
+Exec=env GDK_BACKEND=x11 /opt/Citrix/ICAClient/selfservice --icaroot /opt/Citrix/ICAClient

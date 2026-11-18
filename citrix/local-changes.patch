@@ -1,7 +1,7 @@
-From c0d9d7b8d24fa79b217037595938dc445b698085 Mon Sep 17 00:00:00 2001
+From 2f67e5c7cb20a3cdc918f67263ab22c6ceebb002 Mon Sep 17 00:00:00 2001
 From: thejameslang <7258460+thejameslang@users.noreply.github.com>
 Date: Sat, 14 Nov 2026 08:44:58 -0600
-Subject: [PATCH 1/4] local: bump to 26.08.0.225 (Citrix-published sha256), add
+Subject: [PATCH 1/5] local: bump to 26.08.0.225 (Citrix-published sha256), add
  NetScaler EPA
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
@@ -106,13 +106,13 @@ index b23f461..3d10225 100644
      install -Dm755 -t "${pkgdir}/usr/lib/systemd/system" "ctxcwalogd.service"
      install -Dm755 -t "${pkgdir}/usr/lib/systemd/system" "ctxusbd.service"
 -- 
-2.56.1
+2.56.0
 
 
-From 6c4b248274de467f69cc2722deda4c6f4d9aa959 Mon Sep 17 00:00:00 2001
+From a71823d91edc2fdba2cd6b0729d3ea7882e1b4c7 Mon Sep 17 00:00:00 2001
 From: thejameslang <7258460+thejameslang@users.noreply.github.com>
 Date: Sat, 14 Nov 2026 18:52:31 -0600
-Subject: [PATCH 2/4] local: register Citrix URL/file handlers, depend on
+Subject: [PATCH 2/5] local: register Citrix URL/file handlers, depend on
  webkit2gtk-4.1
 
 Adds the handlers Citrix's hinst installs (receiver://, citrixauthwebviewdone://,
@@ -205,13 +205,13 @@ index 3d10225..2d77732 100644
      install -Dm755 -t "${pkgdir}$ICAROOT" wfica.sh wfica_assoc.sh
  
 -- 
-2.56.1
+2.56.0
 
 
-From 0c90e5c2d4a1467674a0430a75ce687a0fa8efab Mon Sep 17 00:00:00 2001
+From f707d6aa5c56da703a2dfd1c30d57b409fa8f879 Mon Sep 17 00:00:00 2001
 From: thejameslang <7258460+thejameslang@users.noreply.github.com>
 Date: Sat, 14 Nov 2026 20:16:40 -0600
-Subject: [PATCH 3/4] local: systemd units mode 644, RuntimeDirectory= instead
+Subject: [PATCH 3/5] local: systemd units mode 644, RuntimeDirectory= instead
  of /var/run mkdir/rm
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
@@ -304,13 +304,13 @@ index 49d8e76..b043729 100644
  [Install]
  WantedBy=multi-user.target
 -- 
-2.56.1
+2.56.0
 
 
-From ab52e31c700f517448740dd0bacfe77d8f9f3734 Mon Sep 17 00:00:00 2001
+From 262e73609c380a902700b5507c04c6e208966b35 Mon Sep 17 00:00:00 2001
 From: thejameslang <7258460+thejameslang@users.noreply.github.com>
 Date: Sat, 14 Nov 2026 20:34:03 -0600
-Subject: [PATCH 4/4] local: order ctxusbd after ctxcwalogd (After= to match
+Subject: [PATCH 4/5] local: order ctxusbd after ctxcwalogd (After= to match
  Requires=)
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
@@ -354,5 +354,199 @@ index b043729..72f6750 100644
  
  [Service]
 -- 
-2.56.1
+2.56.0
+
+
+From 692724c473a436f78313a3447268ca5cce3af717 Mon Sep 17 00:00:00 2001
+From: thejameslang <7258460+thejameslang@users.noreply.github.com>
+Date: Tue, 17 Nov 2026 21:00:47 -0600
+Subject: [PATCH 5/5] local: run Citrix with GDK_BACKEND=x11
+
+Citrix's auth helpers call X11 directly (gdk_x11_*, XSendEvent). With GTK
+on Wayland (Omarchy sets GDK_BACKEND=wayland,x11,*), PrimaryAuthManager
+segfaults at address 0 when the sign-in window opens. Set GDK_BACKEND=x11
+in every launcher, URL/file handler and wrapper; child processes inherit it.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .SRCINFO                  | 34 +++++++++++++++++++---------------
+ PKGBUILD                  | 21 ++++++++++++++-------
+ citrix-configmgr.desktop  |  2 +-
+ citrix-conncenter.desktop |  2 +-
+ citrix-workspace.desktop  |  2 +-
+ wfica.sh                  |  2 ++
+ wfica_assoc.sh            |  2 ++
+ 7 files changed, 40 insertions(+), 25 deletions(-)
+
+diff --git a/.SRCINFO b/.SRCINFO
+index 9edc41b..04f1a12 100644
+--- a/.SRCINFO
++++ b/.SRCINFO
+@@ -1,7 +1,7 @@
+ pkgbase = icaclient
+ 	pkgdesc = Citrix Workspace App (a.k.a. ICAClient, Citrix Receiver)
+-	pkgver = 26.04.10.1
+-	pkgrel = 1
++	pkgver = 26.08.0.225
++	pkgrel = 5
+ 	url = https://www.citrix.com/downloads/workspace-app/linux/workspace-app-for-linux-latest.html
+ 	install = citrix-client.install
+ 	arch = x86_64
+@@ -19,8 +19,7 @@ pkgbase = icaclient
+ 	depends = libxp
+ 	depends = openssl
+ 	depends = speex
+-	optdepends = webkit2gtk: provides libwebkit2gtk-4.0 ABI; required for selfservice and the wfica connection dialog
+-	optdepends = libsoup: provides libsoup-2.4 ABI; required for selfservice and the wfica connection dialog
++	depends = webkit2gtk-4.1
+ 	conflicts = bin32-citrix-client
+ 	conflicts = citrix-client
+ 	options = !strip
+@@ -35,17 +34,22 @@ pkgbase = icaclient
+ 	source = wfica_assoc.sh
+ 	source = ctxcwalogd.service
+ 	source = ctxusbd.service
+-	sha256sums = 643427b6e04fc47cd7d514af2c2349948d3b45f536c434ba8682dcb1d4314736
+-	sha256sums = 446bfe50e5e1cb027415b264a090cede1468dfbdc8b55e5ce14e9289b6134119
++	sha256sums = d87c996611b342aae3a9a7b593bd2101528a55dfbcaf25824839128a5b904ee2
++	sha256sums = 1328eaff51642cb427f26fafcd7877739887f5a5294fa9e22431b96d53690230
+ 	sha256sums = 1dc6d6592fa08c44fb6a4efa0dc238e9e78352bb799ef2e1a92358b390868064
+-	sha256sums = cdfb3a2ef3bf6b0dd9d17c7a279735db23bc54420f34bfd43606830557a922fe
+-	sha256sums = fe0b92bb9bfa32010fe304da5427d9ca106e968bad0e62a5a569e3323a57443f
+-	sha256sums = a3bd74aaf19123cc550cde71b5870d7dacf9883b7e7a85c90e03b508426c16c4
+-	sha256sums = 0e3a6c7cf7fa9eee7dcde7356e90ffa1cb312bffc0813a0bf123d2f918dc369d
+-	sha256sums = 739da3fca95d07fc3076522acc6b6c1b12b988047bd2fb3c87e37231e49f2e1f
+-	source_x86_64 = icaclient-x64-26.04.10.1.tar.gz::https://downloads.citrix.com/26543/linuxx64-gcc-8-26.04.10.1.tar.gz
+-	sha256sums_x86_64 = 8c0a22cad4a4cda802cb5d3bb09b89779d20f68ba5e454b86485354c557356b5
+-	source_aarch64 = icaclient-arm64-26.04.10.1.tar.gz::https://downloads.citrix.com/26543/linuxarm64-26.04.10.1.tar.gz
+-	sha256sums_aarch64 = 4e65c1d449a2a9f21905135cc02418fbe434bc23705cad26dbe81ef4b3b9bd54
++	sha256sums = 3318fa499bdc3ede3e385577cc7de5b571e8fab563b0f738767f5d7791455288
++	sha256sums = f7b8e9d0d793a2dfcba834f6612b4a6c17f33a4b605332cc5bbdebe4dc148483
++	sha256sums = b7e10496712215bdec748d606e4273ffcc95c8ba7e4a2cf04c9d847fa18f47ac
++	sha256sums = ac14afcd7eef72972c81a8c209ede99cf727e7dd55f30e9a80ddf05d71207dba
++	sha256sums = daadbc8c4aac64900d3ce9e40f15f97abada30420d26be3bafdb0f11d02f595e
++	source_x86_64 = icaclient-x64-26.08.0.225.tar.gz::https://downloads.citrix.com/27152/linuxx64-26.08.0.225.tar.gz?__gda__=exp=1794974385~acl=/*~hmac=c6ed7e1f16ce8f8d92b8c53d0fe696bb4378a3ad95307dfdb99da991bb6fb533
++	depends_x86_64 = gpgme
++	depends_x86_64 = gtk3
++	depends_x86_64 = libnotify
++	depends_x86_64 = libproxy
++	depends_x86_64 = pugixml
++	sha256sums_x86_64 = 4231d4c2550656f89ca05b53d70543391dbf7a0c18bc44b4f85184758c5cbaa0
++	source_aarch64 = icaclient-arm64-26.08.0.225.tar.gz::https://downloads.citrix.com/27152/linuxarm64-26.08.0.225.tar.gz?__gda__=exp=1794974385~acl=/*~hmac=c6ed7e1f16ce8f8d92b8c53d0fe696bb4378a3ad95307dfdb99da991bb6fb533
++	sha256sums_aarch64 = bbcf1e8c76b655c4f9d46ec72b62de1c7fc4f8d7222f40fb57928092afb1c7c3
+ 
+ pkgname = icaclient
+diff --git a/PKGBUILD b/PKGBUILD
+index 2e8eb48..36b9ed2 100644
+--- a/PKGBUILD
++++ b/PKGBUILD
+@@ -8,7 +8,7 @@
+ 
+ pkgname=icaclient
+ pkgver=26.08.0.225
+-pkgrel=4
++pkgrel=5
+ pkgdesc="Citrix Workspace App (a.k.a. ICAClient, Citrix Receiver)"
+ arch=(x86_64 aarch64)
+ url='https://www.citrix.com/downloads/workspace-app/linux/workspace-app-for-linux-latest.html'
+@@ -39,12 +39,12 @@ source=('citrix-configmgr.desktop'
+         'ctxusbd.service')
+ source_x86_64=("$pkgname-x64-$pkgver.tar.gz::$_source64")
+ source_aarch64=("$pkgname-arm64-$pkgver.tar.gz::$_sourceaarch64")
+-sha256sums=('643427b6e04fc47cd7d514af2c2349948d3b45f536c434ba8682dcb1d4314736'
+-            '446bfe50e5e1cb027415b264a090cede1468dfbdc8b55e5ce14e9289b6134119'
++sha256sums=('d87c996611b342aae3a9a7b593bd2101528a55dfbcaf25824839128a5b904ee2'
++            '1328eaff51642cb427f26fafcd7877739887f5a5294fa9e22431b96d53690230'
+             '1dc6d6592fa08c44fb6a4efa0dc238e9e78352bb799ef2e1a92358b390868064'
+-            'cdfb3a2ef3bf6b0dd9d17c7a279735db23bc54420f34bfd43606830557a922fe'
+-            'fe0b92bb9bfa32010fe304da5427d9ca106e968bad0e62a5a569e3323a57443f'
+-            'a3bd74aaf19123cc550cde71b5870d7dacf9883b7e7a85c90e03b508426c16c4'
++            '3318fa499bdc3ede3e385577cc7de5b571e8fab563b0f738767f5d7791455288'
++            'f7b8e9d0d793a2dfcba834f6612b4a6c17f33a4b605332cc5bbdebe4dc148483'
++            'b7e10496712215bdec748d606e4273ffcc95c8ba7e4a2cf04c9d847fa18f47ac'
+             'ac14afcd7eef72972c81a8c209ede99cf727e7dd55f30e9a80ddf05d71207dba'
+             'daadbc8c4aac64900d3ce9e40f15f97abada30420d26be3bafdb0f11d02f595e')
+ sha256sums_x86_64=('4231d4c2550656f89ca05b53d70543391dbf7a0c18bc44b4f85184758c5cbaa0')
+@@ -83,6 +83,8 @@ _package_epa() {
+ #!/bin/sh
+ LD_LIBRARY_PATH="/opt/Citrix/Browser-EPA/compat${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+ export LD_LIBRARY_PATH
++GDK_BACKEND=x11
++export GDK_BACKEND
+ exec /opt/Citrix/Browser-EPA/nsgcepa "$@"
+ EOF
+     chmod 755 "${pkgdir}/usr/bin/nsgcepa"
+@@ -106,6 +108,11 @@ EOF
+ #   citrixweb://  -> util/ctxwebhelper   (sign-in callbacks, web portal detection)
+ #   citrixapp://  -> selfservice
+ #   .cr store configuration files -> util/new_store
++# Local change: every Citrix launcher, handler and wrapper sets GDK_BACKEND=x11.
++# Citrix's auth helpers call X11 directly (gdk_x11_*, XSendEvent); with GTK on
++# Wayland, PrimaryAuthManager segfaults when the sign-in window opens (seen on
++# Omarchy/Hyprland, which sets GDK_BACKEND=wayland,x11,*). Child processes
++# (AuthManagerDaemon, PrimaryAuthManager) inherit it.
+ _package_handlers() {
+     local apps="${pkgdir}/usr/share/applications" ica=/opt/Citrix/ICAClient
+     local name scheme exec
+@@ -115,7 +122,7 @@ _package_handlers() {
+ [Desktop Entry]
+ Type=Application
+ Name=Citrix Workspace Launcher
+-Exec=$exec
++Exec=env GDK_BACKEND=x11 $exec
+ TryExec=${exec%% *}
+ Icon=$ica/icons/receiver.png
+ NoDisplay=true
+diff --git a/citrix-configmgr.desktop b/citrix-configmgr.desktop
+index f0dbd01..cbd8723 100644
+--- a/citrix-configmgr.desktop
++++ b/citrix-configmgr.desktop
+@@ -7,4 +7,4 @@ NoDisplay=false
+ Categories=Application;Network;X-Red-Hat-Base;X-SuSE-Core-Internet;
+ Icon=/opt/Citrix/ICAClient/icons/manager.png
+ TryExec=/opt/Citrix/ICAClient/util/configmgr
+-Exec=/opt/Citrix/ICAClient/util/configmgr --icaroot /opt/Citrix/ICAClient
++Exec=env GDK_BACKEND=x11 /opt/Citrix/ICAClient/util/configmgr --icaroot /opt/Citrix/ICAClient
+diff --git a/citrix-conncenter.desktop b/citrix-conncenter.desktop
+index a2046fb..e5f1299 100644
+--- a/citrix-conncenter.desktop
++++ b/citrix-conncenter.desktop
+@@ -7,4 +7,4 @@ NoDisplay=false
+ Categories=Application;Network;X-Red-Hat-Base;X-SuSE-Core-Internet;
+ Icon=/opt/Citrix/ICAClient/icons/manager.png
+ TryExec=/opt/Citrix/ICAClient/util/conncenter
+-Exec=/opt/Citrix/ICAClient/util/conncenter --icaroot /opt/Citrix/ICAClient
++Exec=env GDK_BACKEND=x11 /opt/Citrix/ICAClient/util/conncenter --icaroot /opt/Citrix/ICAClient
+diff --git a/citrix-workspace.desktop b/citrix-workspace.desktop
+index 92a2b04..b5bd3ec 100644
+--- a/citrix-workspace.desktop
++++ b/citrix-workspace.desktop
+@@ -6,4 +6,4 @@ Name=Citrix Workspace
+ Categories=Application;Network;X-Red-Hat-Base;X-SuSE-Core-Internet;
+ Icon=/opt/Citrix/ICAClient/icons/manager.png
+ TryExec=/opt/Citrix/ICAClient/selfservice
+-Exec=/opt/Citrix/ICAClient/selfservice --icaroot /opt/Citrix/ICAClient
++Exec=env GDK_BACKEND=x11 /opt/Citrix/ICAClient/selfservice --icaroot /opt/Citrix/ICAClient
+diff --git a/wfica.sh b/wfica.sh
+index 4a8d310..b9d44af 100755
+--- a/wfica.sh
++++ b/wfica.sh
+@@ -1,3 +1,5 @@
+ #!/bin/sh
+ export ICAROOT=/opt/Citrix/ICAClient
++# Citrix calls X11 directly; GTK on Wayland makes PrimaryAuthManager segfault.
++export GDK_BACKEND=x11
+ exec ${ICAROOT}/wfica -file "$1"
+diff --git a/wfica_assoc.sh b/wfica_assoc.sh
+index bea0685..dafe7dc 100755
+--- a/wfica_assoc.sh
++++ b/wfica_assoc.sh
+@@ -1,3 +1,5 @@
+ #!/bin/sh
+ export ICAROOT=/opt/Citrix/ICAClient
++# Citrix calls X11 directly; GTK on Wayland makes PrimaryAuthManager segfault.
++export GDK_BACKEND=x11
+ exec ${ICAROOT}/wfica -associate -fileparam "$1"
+-- 
+2.56.0
 
