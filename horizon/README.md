@@ -82,7 +82,8 @@ in `/etc/omnissa/horizon-mandatory-config`.
 **Verified** (2609-1, Nov 2026): with `/etc/omnissa/horizon-mandatory-config` in
 place before the first launch, the client showed data sharing as off. Confirmed
 again on 2609-1 with Omarchy (Hyprland), 17 Nov 2026: Data Sharing was unchecked in
-the client's settings on first launch. `~/.omnissa/horizon-preferences` has no
+the client's settings on first launch, and again on another Omarchy install on
+19 Nov 2026 (2609-1). `~/.omnissa/horizon-preferences` has no
 `view.enableDataSharing` entry in this case, so check the settings window, not that
 file.
 
