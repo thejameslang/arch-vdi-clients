@@ -105,6 +105,25 @@ in README.md and are also in `citrix/local-changes.patch` (against AUR commit
 9. Tell the user that the first `.ica` file shows the license agreement, and that
    the reminder about `~/.ICAClient` reappears on every upgrade and can be ignored.
 
+## Omarchy: display scaling (both clients)
+
+On Omarchy (Hyprland) with a fractional monitor scale (`hyprctl monitors` shows
+`scale:` with a fraction, such as 1.5), run `omarchy/vdi-scaling` after both
+clients are installed. Doing that only needs the user's home folder, so no sudo.
+See "Omarchy: display scaling" in README.md for why it's needed. Then:
+
+- Have the user quit both clients completely. For Citrix, check that
+  `pgrep -f /opt/Citrix/ICAClient/` returns nothing; leftover helpers such as
+  `icasessionmgr` and `AuthManagerDaemon` keep the old values.
+- After a relaunch from the app launcher, `/proc/<pid>/environ` of `wfica` and
+  of `/usr/lib/omnissa/horizon/bin/horizon-client` shows `GDK_SCALE=1` and
+  `GDK_DPI_SCALE=<scale>`.
+- Have the user check that the remote desktop is at the matching scale (150% for
+  1.5) and is still at it after logging out and back in.
+
+Don't change the scale inside the package. The value depends on the screen.
+Don't set `GDK_SCALE` to a fraction either: GTK reads it as a whole number.
+
 ## After a gpgme update: re-test EPA
 
 EPA reaches Arch's gpgme 2.x through the `compat/libgpgme.so.11` link, which points
@@ -135,3 +154,8 @@ the EPA binary (its hash is checked); look for a Citrix EPA update instead.
   it comes back, check the environment of the Citrix processes first.
   An `AuthManagerDaemon` left over from a launch without the setting keeps the
   Wayland backend until it's killed.
+- The remote desktop is at 200% or 100% on Omarchy, or a scale set inside Windows
+  resets at every logon: the client is reporting the wrong DPI. Check its
+  `GDK_SCALE`/`GDK_DPI_SCALE` in `/proc/<pid>/environ`, and re-run
+  `omarchy/vdi-scaling` if a launcher lost them. Citrix rewrites subscribed-desktop
+  launchers on store refresh.

@@ -1,0 +1,77 @@
+#!/bin/bash
+# Make Citrix Workspace and Omnissa Horizon match a fractional monitor scale on
+# Omarchy (Hyprland).
+#
+# Omarchy runs X11 apps unscaled (xwayland:force_zero_scaling) and sets
+# GDK_SCALE=2 for them. Both clients are X11/GTK apps, and both send the local
+# DPI to the remote desktop at every logon (Citrix DPI matching, Horizon DPI
+# Synchronization). With GDK_SCALE=2 the remote desktop comes up at 200%; with
+# GDK_SCALE=1 at 100%, and a scale set inside Windows is reset at the next logon.
+# GDK_SCALE only accepts whole numbers, so this sets GDK_SCALE=1 plus
+# GDK_DPI_SCALE=<monitor scale>: the clients then report e.g. 144 DPI (150%).
+#
+# Writes per-user launcher overrides to ~/.local/share/applications. Package
+# files are not touched. Re-run after a Citrix/Horizon upgrade, and whenever
+# Citrix rewrites a subscribed desktop's launcher (it does on store refresh).
+#
+# Usage: vdi-scaling [SCALE]   (default: scale of the first Hyprland monitor)
+#        vdi-scaling --remove
+set -euo pipefail
+
+SYS=/usr/share/applications
+APPS="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
+mkdir -p "$APPS"
+
+remove=false
+case "${1:-}" in
+  --remove) remove=true ;;
+  -h|--help) sed -n '2,/^set -/p' "$0" | sed '$d; s/^# \{0,1\}//'; exit 0 ;;
+  "")
+    command -v hyprctl >/dev/null || { echo "hyprctl not found; pass the scale, e.g. vdi-scaling 1.5" >&2; exit 1; }
+    scale=$(hyprctl monitors | awk '/^\tscale:/ {print $2; exit}') ;;
+  *) scale=$1 ;;
+esac
+if ! $remove; then
+  [[ ${scale:-} =~ ^[0-9]+(\.[0-9]+)?$ ]] || { echo "invalid scale: '${scale:-}'" >&2; exit 1; }
+  scale=$(printf '%s' "$scale" | sed -E 's/(\.[0-9]*[1-9])0+$/\1/; s/\.0+$//')
+fi
+
+# Strip any previous GDK_SCALE/GDK_DPI_SCALE from Exec= lines, then (unless
+# removing) add ours: after a leading "env ", or as a new "env" prefix.
+fix() {
+  sed -E -e '/^Exec=/{ s/ GDK_SCALE=[^ ]*//g; s/ GDK_DPI_SCALE=[^ ]*//g; s/^Exec=env (\/|\$|horizon-client)/Exec=\1/ }' "$1" |
+  if $remove; then cat; else
+    sed -E -e "/^Exec=/{ s/^Exec=env /Exec=env GDK_SCALE=1 GDK_DPI_SCALE=$scale /; t; s/^Exec=/Exec=env GDK_SCALE=1 GDK_DPI_SCALE=$scale / }"
+  fi
+}
+
+shopt -s nullglob
+changed=0
+# Package launchers: start from an existing per-user copy if there is one (for
+# example horizon-light's), otherwise from the package's file.
+for sys in "$SYS"/citrix-*.desktop "$SYS"/horizon.client.desktop; do
+  name=$(basename "$sys")
+  src="$APPS/$name"; [ -e "$src" ] || src=$sys
+  $remove && [ "$src" = "$sys" ] && continue
+  fix "$src" > "$APPS/.$name.tmp"
+  if $remove && cmp -s "$APPS/.$name.tmp" "$sys"; then
+    rm -f "$APPS/.$name.tmp" "$APPS/$name"; echo "removed  $name"
+  else
+    mv "$APPS/.$name.tmp" "$APPS/$name"; echo "updated  $name"
+  fi
+  changed=1
+done
+# Launchers Citrix generates for subscribed desktops/apps live only in $APPS.
+for f in "$APPS"/Citrix_*.desktop; do
+  fix "$f" > "$f.tmp" && mv "$f.tmp" "$f"
+  echo "updated  $(basename "$f")"; changed=1
+done
+[ $changed = 1 ] || echo "no Citrix or Horizon launchers found"
+command -v update-desktop-database >/dev/null && update-desktop-database "$APPS" 2>/dev/null || true
+
+if $remove; then
+  echo "Scaling overrides removed."
+else
+  echo "Set GDK_SCALE=1 GDK_DPI_SCALE=$scale. Quit Citrix and Horizon completely"
+  echo "(pkill -f /opt/Citrix/ICAClient/) so they restart with it."
+fi

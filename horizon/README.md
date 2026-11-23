@@ -97,7 +97,8 @@ not a leftover from the build.
 ## Other Arch-based distros
 
 The steps above also work unchanged on Omarchy (Hyprland). The dark KDE theme fix
-doesn't apply there. On a fresh Omarchy install from offline media, pacman may have
+doesn't apply there. With a fractional monitor scale, run `omarchy/vdi-scaling`;
+see "Omarchy: display scaling" in the [main README](../README.md). On a fresh Omarchy install from offline media, pacman may have
 no `core`/`extra`/`multilib` databases yet (`/var/lib/pacman/sync` holds only
 `offline.db` and `omarchy.db`). Run `sudo pacman -Syu` before installing the
 dependencies.

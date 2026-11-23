@@ -12,6 +12,9 @@ Everything gets built in a temporary directory under `/tmp`, so nothing is left 
 your home folder. The packages are installed with pacman, so they can be removed
 cleanly with `pacman -R`.
 
+On Omarchy with a fractional monitor scale, also see
+[Omarchy: display scaling](#omarchy-display-scaling-both-clients).
+
 If you use Claude Code, open it in this repo and ask it to set up the clients.
 [CLAUDE.md](CLAUDE.md) has the step-by-step instructions it follows.
 
@@ -107,6 +110,51 @@ sudo systemctl enable --now ctxusbd
 
 It pulls in `ctxcwalogd` (the log writer) automatically. Not tested on this setup
 yet.
+
+## Omarchy: display scaling (both clients)
+
+With a fractional monitor scale (for example 1.5 on a 1920×1200 laptop panel), both
+clients come out at the wrong size, and a scale set inside the remote Windows
+desktop resets to 100% at the next logon.
+
+Why: both clients are X11/GTK apps. Omarchy runs X11 apps unscaled
+(`xwayland:force_zero_scaling = true`) and sets `GDK_SCALE=2` for them
+(`omarchy_gdk_scale` in `~/.config/hypr/monitors.lua`). Both clients also send the
+local DPI to the remote desktop at every logon (Citrix "DPI matching", Horizon "DPI
+Synchronization", which is set by policy on the remote side), so Windows ends up at
+200% with `GDK_SCALE=2`, or at 100% with `GDK_SCALE=1`. `GDK_SCALE` only accepts
+whole numbers.
+
+The fix is `GDK_SCALE=1 GDK_DPI_SCALE=<monitor scale>`. The clients then report
+the matching DPI (144 for 1.5), and the remote desktop comes up at 150% and stays
+there. Their own windows (sign-in, toolbars) also match the rest of the desktop.
+[`omarchy/vdi-scaling`](omarchy/vdi-scaling) sets this up for your user, using the
+scale of the first Hyprland monitor or the one you pass:
+
+```sh
+omarchy/vdi-scaling          # or: omarchy/vdi-scaling 1.5
+pkill -f /opt/Citrix/ICAClient/   # quit running Citrix helpers so they pick it up
+```
+
+It writes per-user copies of the Citrix and Horizon launchers to
+`~/.local/share/applications`, with the scale settings added to each `Exec=` line.
+It also edits the launchers Citrix generates there for subscribed desktops.
+Package files aren't touched. If a per-user `horizon.client.desktop` already
+exists (for example from `horizon-light`), the script edits that copy. Running it
+again replaces the values. `omarchy/vdi-scaling --remove` undoes it.
+
+Run it again:
+- after a Citrix or Horizon upgrade, since the copies don't pick up upstream
+  launcher changes
+- after changing your monitor scale
+- if a subscribed Citrix desktop goes back to the wrong scale. Citrix rewrites
+  those launchers when it refreshes the store, which drops the settings.
+
+Starting a client from a terminal skips the launchers, so prefix the command with
+the same `env` settings. Tested on Omarchy at scale 1.5 on 23 Nov 2026, with Citrix
+26.08.0.225 and Horizon 2609-1 installed: the remote desktops came up at the
+right size. The launchers had been edited by hand with the same settings; the
+script was then checked to produce identical files.
 
 ## License
 
